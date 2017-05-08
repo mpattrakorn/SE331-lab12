@@ -9,8 +9,10 @@ export class StudentsDataService {
     let studentArray:Student[];
     return this.http.get('app/data/people.json')
       .map(res => res.json().students);
+  }
 
-
+  addStudentWihtAuthen(student:Student,imageFile:any,user:any){
+     return null;
   }
 
   getStudent(id:number){

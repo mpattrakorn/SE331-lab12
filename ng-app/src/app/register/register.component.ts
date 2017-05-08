@@ -2,6 +2,10 @@ import {Component, OnInit, ViewChild, ElementRef} from '@angular/core';
 import {Student} from '../students/student';
 import {Router} from "@angular/router";
 import {StudentsDataService} from "../service/students-data.service";
+import {Http, Headers, Response, RequestOptions,URLSearchParams} from '@angular/http';
+import {Observable} from "rxjs";
+import {AuthenticationService} from "../service/authentication.service";
+
 
 @Component({
   selector: 'app-register',
@@ -11,15 +15,56 @@ import {StudentsDataService} from "../service/students-data.service";
 export class RegisterComponent implements OnInit {
 
   student: any = {};
+  user:any = {};
+  roles:Array<string> = ['Admin','User'];
+  private authenticationService: AuthenticationService;
 
-  constructor(private studentDataService: StudentsDataService, private router: Router) {
+  private headers = new Headers({
+    'Content-type': 'application/json',
+    'Authorization': 'Bearer ' + this.authenticationService.getToken()
+  });
+
+  public refreshValue(value:any):void {
+      this.user.role = value.text;
+  }
+
+
+  constructor(private studentDataService: StudentsDataService, private router: Router, private http: Http) {
   };
 
   ngOnInit() {
     this.student = new Student();
   }
 
-  upQuantity(student: Student) {
+  addStudentWihtAuthen(student:Student,file:any,user:any) {
+    let formData = new FormData();
+    let fileName: string;
+    formData.append('file', file);
+    let header = new Headers({
+      'Authorization': 'Bearer ' +
+      this.authenticationService.getToken()
+    });
+    let options = new RequestOptions({headers: header});
+    return this.http.post('http://localhost:8080/student/image',
+      formData, options)
+      .flatMap(filename => {
+        student.image = filename.text();
+        let headers = new Headers({'Content-Type': 'application/json'});
+        let options = new RequestOptions({headers: this.headers});
+        user.student = student;
+        let body = JSON.stringify(user);
+        return this.http.post('http://localhost:8080/studentAuthen', body,
+          options)
+          .map(res => {
+            return res.json()
+          })
+          .catch((error: any) => {
+            return Observable.throw(new Error(error.status))
+          })
+      })
+  }
+
+    upQuantity(student: Student) {
     student.penAmount++;
   }
 
@@ -32,7 +77,8 @@ export class RegisterComponent implements OnInit {
     let result: Student;
     let inputEl: HTMLInputElement = this.inputEl.nativeElement;
 
-    this.studentDataService.addStudent(student,inputEl.files.item(0))
+
+    this.studentDataService.addStudentWihtAuthen(student,inputEl.files.item(0),this.user)
       .subscribe(resultStudent => {
         result = resultStudent
         if (result != null){
